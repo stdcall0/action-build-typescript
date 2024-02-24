@@ -1,6 +1,7 @@
 const core = require("@actions/core");
 const github = require("@actions/github");
 const io = require("@actions/io");
+const fs = require("fs");
 const { exec } = require("@actions/exec");
 const { access } = require("fs").promises;
 const { join } = require("path");
@@ -55,25 +56,56 @@ if (pushToBranch == true && !githubToken)
     core.info("Configuring Git user");
     await exec(`git config --global user.name actions-user`);
     await exec(`git config --global user.email action@github.com`);
-
+    
+    core.info("Cloning branch");
+    const clone = await exec(
+      `git clone https://${github.context.actor}:${githubToken}@github.com/${owner}/${repo}.git branch-${branchName}`
+    );
+    if (clone !== 0)
+      return exit("Something went wrong while cloning the repository.");
+    // Check out to branch
     await exec(
+      `${
+        branchExists
+          ? `git checkout ${branchName}`
+          : `git checkout --orphan ${branchName}`
+      }`,
+      [],
+      { cwd: `branch-${branchName}` }
+    );
+    
+    /* await exec(
       `git switch -c ${branchName} master`,
       [],
       { cwd: directory }
-    );
+    ); */
 
+    core.info("Removing original files");
+    fs.readdirSync(`branch-${branchName}`, {withFileTypes: true})
+      .filter(item => item.name != ".git")
+      .map(item => item.name)
+      .forEach(x => await io.rmRF(join(`branch-${branchName}`, x)));
+
+    core.info("Copying new files");
+    fs.readdirSync(directory, {withFileTypes: true})
+      .filter(item => item.name != ".git")
+      .map(item => item.name)
+      .forEach(x => await io.cp(join(directory, x), `branch-${branchName}/`,{ recursive: true, force: true }));
+    
+    // Commit files
+    core.info("Adding and commiting files");
+    await exec(`git add -A ."`, [], { cwd: `branch-${branchName}` });
+    
     core.info("Removing typescript files");
     await exec(
       `git rm -r *.ts`,
       [],
-      { cwd: directory }
+      { cwd: `branch-${branchName}` }
     );
     
-    // Commit files
-    core.info("Adding and commiting files");
-    await exec(`git add ."`, [], { cwd: directory });
+    
     // We use the catch here because sometimes the code itself may not have changed
-    await exec(`git commit -m "build: ${github.context.sha}"`, [], {
+    await exec(`git commit -m "TS Build: ${github.context.sha}"`, [], {
       cwd: directory,
     }).catch((_err) =>
       core.warning("Couldn't commit new changes because there aren't any")
