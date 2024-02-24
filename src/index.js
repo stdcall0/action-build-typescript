@@ -39,6 +39,12 @@ if (pushToBranch == true && !githubToken)
     if (build !== 0) return exit("Something went wrong while building.");
     if (pushToBranch == "false") return process.exit(0);
 
+    await exec(
+      `rm -rf *.ts`,
+      [],
+      { cwd: directory }
+    );
+
     const octokit = github.getOctokit(githubToken);
 
     const [owner, repo] = process.env.GITHUB_REPOSITORY.split("/");
