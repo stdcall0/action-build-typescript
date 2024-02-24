@@ -56,44 +56,37 @@ if (pushToBranch == true && !githubToken)
     await exec(`git config --global user.email action@github.com`);
 
     core.info("Cloning branch");
-    const clone = await exec(
+    /*const clone = await exec(
       `git clone https://${github.context.actor}:${githubToken}@github.com/${owner}/${repo}.git branch-${branchName}`
     );
     if (clone !== 0)
-      return exit("Something went wrong while cloning the repository.");
+      return exit("Something went wrong while cloning the repository.");*/
     // Check out to branch
-    await exec(
-      `${
-        branchExists
-          ? `git checkout ${branchName}`
-          : `git checkout --orphan ${branchName}`
-      }`,
+    if (branchExists) await exec(
+      `git branch -d ${branchName}`,
       [],
-      { cwd: `branch-${branchName}` }
+      { cwd: directory }
     );
-
-    // Copy compiled files and package* files
-    core.info("Copying compiled files and package* files");
-    await io.cp(join(directory, outDir), `branch-${branchName}`, {
-      recursive: true,
-    });
-    await io.cp(join(directory, "package.json"), `branch-${branchName}`);
-    await io.cp(join(directory, "package-lock.json"), `branch-${branchName}`);
+    await exec(
+      `git switch -c ${branchName} master`,
+      [],
+      { cwd: directory }
+    );
 
     // Commit files
     core.info("Adding and commiting files");
-    await exec(`git add ."`, [], { cwd: `branch-${branchName}` });
+    await exec(`git add ."`, [], { cwd: directory });
     // We use the catch here because sometimes the code itself may not have changed
     await exec(`git commit -m "build: ${github.context.sha}"`, [], {
-      cwd: `branch-${branchName}`,
+      cwd: directory,
     }).catch((_err) =>
       core.warning("Couldn't commit new changes because there aren't any")
     );
 
     // Push files
     core.info("Pushing new changes");
-    await exec(`git push origin HEAD:${branchName}`, [], {
-      cwd: `branch-${branchName}`,
+    await exec(`git push --force origin HEAD:${branchName}`, [], {
+      cwd: directory,
     });
 
     process.exit(0);
