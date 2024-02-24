@@ -109,7 +109,7 @@ if (pushToBranch == true && !githubToken)
     
     
     // We use the catch here because sometimes the code itself may not have changed
-    await exec(`git commit -m "TS Build: ${github.context.sha} ${github.event.head_commit.message}"`, [], {
+    await exec(`git commit -m "TS Build: ${github.context.sha} ${github.event.commits[0].message}"`, [], {
       cwd: branchDir,
     }).catch((_err) =>
       core.warning("Couldn't commit new changes because there aren't any")
