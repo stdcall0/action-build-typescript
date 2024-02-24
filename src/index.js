@@ -102,7 +102,7 @@ if (pushToBranch == true && !githubToken)
     
     core.info("Removing typescript files");
     await exec(
-      `git rm -r *.ts`,
+      `git rm -r -f *.ts`,
       [],
       { cwd: branchDir }
     );
