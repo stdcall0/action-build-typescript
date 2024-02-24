@@ -55,18 +55,6 @@ if (pushToBranch == true && !githubToken)
     await exec(`git config --global user.name actions-user`);
     await exec(`git config --global user.email action@github.com`);
 
-    core.info("Cloning branch");
-    /*const clone = await exec(
-      `git clone https://${github.context.actor}:${githubToken}@github.com/${owner}/${repo}.git branch-${branchName}`
-    );
-    if (clone !== 0)
-      return exit("Something went wrong while cloning the repository.");*/
-    // Check out to branch
-    if (branchExists) await exec(
-      `git branch -d ${branchName}`,
-      [],
-      { cwd: directory }
-    );
     await exec(
       `git switch -c ${branchName} master`,
       [],
