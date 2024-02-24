@@ -80,6 +80,9 @@ if (pushToBranch == true && !githubToken)
       { cwd: directory }
     ); */
 
+    core.info(`Directory: ${directory}`);
+    core.info(`branch-${branchName}`);
+    
     core.info("Removing original files");
     let t = fs.readdirSync(`branch-${branchName}`, {withFileTypes: true})
       .filter(item => item.name != ".git")
@@ -106,7 +109,7 @@ if (pushToBranch == true && !githubToken)
     
     // We use the catch here because sometimes the code itself may not have changed
     await exec(`git commit -m "TS Build: ${github.context.sha}"`, [], {
-      cwd: directory,
+      cwd: `branch-${branchName}`,
     }).catch((_err) =>
       core.warning("Couldn't commit new changes because there aren't any")
     );
@@ -114,7 +117,7 @@ if (pushToBranch == true && !githubToken)
     // Push files
     core.info("Pushing new changes");
     await exec(`git push --force origin HEAD:${branchName}`, [], {
-      cwd: directory,
+      cwd: `branch-${branchName}`,
     });
 
     process.exit(0);
