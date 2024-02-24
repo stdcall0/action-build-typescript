@@ -81,16 +81,16 @@ if (pushToBranch == true && !githubToken)
     ); */
 
     core.info("Removing original files");
-    fs.readdirSync(`branch-${branchName}`, {withFileTypes: true})
+    let t = fs.readdirSync(`branch-${branchName}`, {withFileTypes: true})
       .filter(item => item.name != ".git")
       .map(item => item.name)
-      .forEach(x => { await io.rmRF(join(`branch-${branchName}`, x)); });
+    for (let i = 0; i < t.length; ++i) await io.rmRF(join(`branch-${branchName}`, t[i]));
 
     core.info("Copying new files");
-    fs.readdirSync(directory, {withFileTypes: true})
+    t = fs.readdirSync(directory, {withFileTypes: true})
       .filter(item => item.name != ".git")
-      .map(item => item.name)
-      .forEach(x => {await io.cp(join(directory, x), `branch-${branchName}/`,{ recursive: true, force: true });} );
+      .map(item => item.name);
+    for (let i = 0; i < t.length; ++i) await io.cp(join(directory, t[i]), `branch-${branchName}/`,{ recursive: true, force: true });
     
     // Commit files
     core.info("Adding and commiting files");
