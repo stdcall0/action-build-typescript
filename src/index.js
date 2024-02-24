@@ -52,6 +52,7 @@ if (pushToBranch == true && !githubToken)
     const branchExists = branches.data.some(
       (branch) => branch.name.toLowerCase() === branchName
     );
+    const branchDir = join(process.env.GITHUB_WORKSPACE, `../branch-${branchName}`);
     // Set up Git user
     core.info("Configuring Git user");
     await exec(`git config --global user.name actions-user`);
@@ -59,7 +60,7 @@ if (pushToBranch == true && !githubToken)
     
     core.info("Cloning branch");
     const clone = await exec(
-      `git clone https://${github.context.actor}:${githubToken}@github.com/${owner}/${repo}.git branch-${branchName}`
+      `git clone https://${github.context.actor}:${githubToken}@github.com/${owner}/${repo}.git ${branchDir}`
     );
     if (clone !== 0)
       return exit("Something went wrong while cloning the repository.");
@@ -71,7 +72,7 @@ if (pushToBranch == true && !githubToken)
           : `git checkout --orphan ${branchName}`
       }`,
       [],
-      { cwd: `branch-${branchName}` }
+      { cwd: branchDir }
     );
     
     /* await exec(
@@ -81,35 +82,35 @@ if (pushToBranch == true && !githubToken)
     ); */
 
     core.info(`Directory: ${directory}`);
-    core.info(`branch-${branchName}`);
+    core.info(`${branchDir}`);
     
     core.info("Removing original files");
-    let t = fs.readdirSync(`branch-${branchName}`, {withFileTypes: true})
+    let t = fs.readdirSync(branchDir, {withFileTypes: true})
       .filter(item => item.name != ".git")
       .map(item => item.name)
-    for (let i = 0; i < t.length; ++i) await io.rmRF(join(`branch-${branchName}`, t[i]));
+    for (let i = 0; i < t.length; ++i) await io.rmRF(join(branchDir, t[i]));
 
     core.info("Copying new files");
     t = fs.readdirSync(directory, {withFileTypes: true})
       .filter(item => item.name != ".git")
       .map(item => item.name);
-    for (let i = 0; i < t.length; ++i) await io.cp(join(directory, t[i]), `branch-${branchName}/`,{ recursive: true, force: true });
+    for (let i = 0; i < t.length; ++i) await io.cp(join(directory, t[i]), branchDir, { recursive: true, force: true });
     
     // Commit files
     core.info("Adding and commiting files");
-    await exec(`git add -A ."`, [], { cwd: `branch-${branchName}` });
+    await exec(`git add -A"`, [], { cwd: branchDir });
     
     core.info("Removing typescript files");
     await exec(
       `git rm -r *.ts`,
       [],
-      { cwd: `branch-${branchName}` }
+      { cwd: branchDir }
     );
     
     
     // We use the catch here because sometimes the code itself may not have changed
     await exec(`git commit -m "TS Build: ${github.context.sha}"`, [], {
-      cwd: `branch-${branchName}`,
+      cwd: branchDir,
     }).catch((_err) =>
       core.warning("Couldn't commit new changes because there aren't any")
     );
@@ -117,7 +118,7 @@ if (pushToBranch == true && !githubToken)
     // Push files
     core.info("Pushing new changes");
     await exec(`git push --force origin HEAD:${branchName}`, [], {
-      cwd: `branch-${branchName}`,
+      cwd: branchDir,
     });
 
     process.exit(0);
