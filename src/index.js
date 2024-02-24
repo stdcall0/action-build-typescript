@@ -39,11 +39,6 @@ if (pushToBranch == true && !githubToken)
     if (build !== 0) return exit("Something went wrong while building.");
     if (pushToBranch == "false") return process.exit(0);
 
-    await exec(
-      `rm -rf *.ts`,
-      [],
-      { cwd: directory }
-    );
 
     const octokit = github.getOctokit(githubToken);
 
@@ -67,6 +62,13 @@ if (pushToBranch == true && !githubToken)
       { cwd: directory }
     );
 
+    core.info("Removing typescript files");
+    await exec(
+      `git rm -r *.ts`,
+      [],
+      { cwd: directory }
+    );
+    
     // Commit files
     core.info("Adding and commiting files");
     await exec(`git add ."`, [], { cwd: directory });
